@@ -1,0 +1,49 @@
+name: Build TWRP
+on:
+  workflow_dispatch: # ทำให้เรากดสั่ง Build เองได้
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Cleanup Space
+      run: |
+        sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /usr/local/lib/android
+        sudo apt-get clean
+
+    - name: Install Build Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc build-essential zip curl libc6-dev libncurses5-dev libssl-dev python3 python-is-python3
+
+    - name: Set up TWRP Minimal Manifest
+      run: |
+        mkdir ~/twrp
+        cd ~/twrp
+        git config --global user.name "frankky08"
+        git config --global user.email "frankky08@github.com"
+        # ใช้ Manifest สำหรับ Android 12.1 เป็นฐาน (เสถียรที่สุดสำหรับสร้าง recovery)
+        repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
+        repo sync -j$(nproc --all)
+
+    - name: Clone Device Tree
+      run: |
+        cd ~/twrp
+        git clone https://github.com/frankky08/android_device_lenovo_TB330XU.git device/lenovo/TB330XU
+
+    - name: Build TWRP
+      run: |
+        cd ~/twrp
+        export ALLOW_MISSING_DEPENDENCIES=true
+        source build/envsetup.sh
+        lunch twrp_TB330XU-userdebug
+        make bootimage -j$(nproc --all)
+
+    - name: Upload Result
+      uses: actions/upload-artifact@v3
+      with:
+        name: TWRP-Image
+        path: /home/runner/twrp/out/target/product/TB330XU/boot.img
