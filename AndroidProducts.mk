@@ -1,0 +1,5 @@
+PRODUCT_MAKEFILES := \
+    $(LOCAL_DIR)/twrp_TB330XU.mk
+
+COMMON_LUNCH_CHOICES := \
+    twrp_TB330XU-userdebug
